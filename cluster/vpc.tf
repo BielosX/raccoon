@@ -4,7 +4,11 @@ locals {
   new_bits      = local.desired_mask - local.prefix_length
   zones         = length(var.availability_zones)
   vpc_name      = "${var.cluster_name}-vpc"
-  ecr_endpoints = ["com.amazonaws.${var.region}.ecr.dkr", "com.amazonaws.${var.region}.ecr.api"]
+  interface_endpoints = [
+    "com.amazonaws.${var.region}.ecr.dkr",
+    "com.amazonaws.${var.region}.ecr.api",
+    "com.amazonaws.${var.region}.logs",
+  ]
 }
 
 resource "aws_vpc" "vpc" {
@@ -62,9 +66,9 @@ resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public[count.index].id
 }
 
-resource "aws_security_group" "ecr_endpoint_sg" {
+resource "aws_security_group" "vpc_endpoint_sg" {
   vpc_id      = aws_vpc.vpc.id
-  name_prefix = "ecr-endpoint-sg"
+  name_prefix = "vpc-endpoint-sg"
   egress {
     from_port   = 0
     to_port     = 0
@@ -79,12 +83,13 @@ resource "aws_security_group" "ecr_endpoint_sg" {
   }
 }
 
-resource "aws_vpc_endpoint" "ecr" {
-  for_each            = toset(local.ecr_endpoints)
+resource "aws_vpc_endpoint" "interface" {
+  depends_on          = [aws_security_group.vpc_endpoint_sg]
+  for_each            = toset(local.interface_endpoints)
   vpc_id              = aws_vpc.vpc.id
   service_name        = each.value
   vpc_endpoint_type   = "Interface"
   subnet_ids          = aws_subnet.private[*].id
-  security_group_ids  = [aws_security_group.ecr_endpoint_sg.id]
+  security_group_ids  = [aws_security_group.vpc_endpoint_sg.id]
   private_dns_enabled = true
 }
