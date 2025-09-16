@@ -4,11 +4,6 @@ locals {
   new_bits      = local.desired_mask - local.prefix_length
   zones         = length(var.availability_zones)
   vpc_name      = "${var.cluster_name}-vpc"
-  interface_endpoints = [
-    "com.amazonaws.${var.region}.ecr.dkr",
-    "com.amazonaws.${var.region}.ecr.api",
-    "com.amazonaws.${var.region}.logs",
-  ]
 }
 
 resource "aws_vpc" "vpc" {
@@ -66,30 +61,30 @@ resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public[count.index].id
 }
 
-resource "aws_security_group" "vpc_endpoint_sg" {
-  vpc_id      = aws_vpc.vpc.id
-  name_prefix = "vpc-endpoint-sg"
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [var.cidr]
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.vpc.id
+
+  tags = {
+    Name : "${local.vpc_name}-private-routes"
   }
 }
 
-resource "aws_vpc_endpoint" "interface" {
-  depends_on          = [aws_security_group.vpc_endpoint_sg]
-  for_each            = toset(local.interface_endpoints)
-  vpc_id              = aws_vpc.vpc.id
-  service_name        = each.value
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private[*].id
-  security_group_ids  = [aws_security_group.vpc_endpoint_sg.id]
-  private_dns_enabled = true
+resource "aws_route_table_association" "private" {
+  count          = local.zones
+  route_table_id = aws_route_table.private.id
+  subnet_id      = aws_subnet.private[count.index].id
+}
+
+module "fck-nat" {
+  source = "git::https://github.com/RaJiska/terraform-aws-fck-nat.git"
+
+  name          = "${var.cluster_name}-fck-nat"
+  vpc_id        = aws_vpc.vpc.id
+  subnet_id     = aws_subnet.public[0].id
+  instance_type = "t4g.nano"
+
+  update_route_tables = true
+  route_tables_ids = {
+    "private" = aws_route_table.private.id
+  }
 }
