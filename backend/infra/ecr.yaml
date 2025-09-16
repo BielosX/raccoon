@@ -1,0 +1,13 @@
+Parameters:
+  Name:
+    Type: String
+Resources:
+  Repository:
+    Type: "AWS::ECR::Repository"
+    Properties:
+      EmptyOnDelete: false
+      RepositoryName: !Ref Name
+      ImageTagMutability: "IMMUTABLE"
+Outputs:
+  RepositoryUri:
+    Value: !GetAtt Repository.RepositoryUri

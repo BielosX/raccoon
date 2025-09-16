@@ -1,0 +1,19 @@
+image_name := "raccoon"
+stack_name := "raccoon-ecr"
+region := env("AWS_REGION", "eu-west-1")
+
+export AWS_REGION := region
+export AWS_PAGER := ""
+
+create-ecr:
+    aws cloudformation deploy --stack-name "{{stack_name}}" \
+      --template-file "{{justfile_directory()}}/infra/ecr.yaml" \
+      --parameter-overrides "Name={{image_name}}"
+
+delete-ecr:
+    #!/bin/bash -e
+    aws cloudformation delete-stack --stack-name "{{stack_name}}"
+    while aws cloudformation describe-stacks --stack-name "{{stack_name}}" > /dev/null 2>&1; do
+        echo "Stack {{stack_name}} still exists, waiting..."
+        sleep 5
+    done
