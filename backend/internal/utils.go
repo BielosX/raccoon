@@ -30,6 +30,6 @@ func GetEnvOrDefault(key, defaultValue string) string {
 }
 
 func WriteString(w http.ResponseWriter, s string, code int) {
-	_, _ = w.Write([]byte(s))
 	w.WriteHeader(code)
+	_, _ = w.Write([]byte(s))
 }

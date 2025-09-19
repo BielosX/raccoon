@@ -50,5 +50,7 @@ deploy: meta
 tf-destroy:
     tofu destroy -auto-approve -var "image=tmp" -var-file="dev.tfvars"
 
+destroy: tf-destroy delete-ecr
+
 tf-fmt:
     tofu fmt -recursive "{{justfile_directory()}}/infra"

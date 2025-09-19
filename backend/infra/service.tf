@@ -27,6 +27,14 @@ resource "aws_iam_role_policy_attachment" "attachment" {
   role       = aws_iam_role.execution_role.id
 }
 
+resource "aws_cloudwatch_log_group" "group" {
+  name = "/${var.cluster_name}/raccoon"
+}
+
+/*
+  Execution Role -> Pull Images, send logs using 'awslogs' driver
+  Task Role -> API calls from Task (S3, DynamoDB etc.)
+ */
 resource "aws_ecs_task_definition" "task_definition" {
   network_mode             = "awsvpc"
   family                   = "raccoon"
@@ -53,6 +61,14 @@ resource "aws_ecs_task_definition" "task_definition" {
       name  = tostring(k)
       value = tostring(v)
     }]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-region        = var.region
+        awslogs-group         = aws_cloudwatch_log_group.group.id
+        awslogs-stream-prefix = "/raccoon"
+      }
+    }
   }])
 }
 

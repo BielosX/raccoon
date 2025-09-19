@@ -5,7 +5,7 @@ Resources:
   Repository:
     Type: "AWS::ECR::Repository"
     Properties:
-      EmptyOnDelete: false
+      EmptyOnDelete: true
       RepositoryName: !Ref Name
       ImageTagMutability: "IMMUTABLE"
 Outputs:
