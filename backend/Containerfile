@@ -1,0 +1,13 @@
+FROM golang:1.25.1-alpine as builder
+
+COPY . /workspace
+WORKDIR /workspace
+
+RUN GOOS=linux GOARCH=arm64 go build -o bin/main ./cmd/main.go
+RUN adduser -u 1001 -s /bin/bash -D raccoon
+
+FROM scratch
+COPY --from=builder /workspace/bin/main /bin/main
+COPY --from=builder /etc/passwd /etc/passwd
+USER 1001
+CMD ["/bin/main"]

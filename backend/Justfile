@@ -1,19 +1,54 @@
 image_name := "raccoon"
 stack_name := "raccoon-ecr"
 region := env("AWS_REGION", "eu-west-1")
+timestamp := `date +%s`
+image_tag := env("IMAGE_TAG", timestamp)
 
 export AWS_REGION := region
 export AWS_PAGER := ""
 
-create-ecr:
+meta:
+    [ -f meta.json ] || echo "{}" > meta.json
+
+create-ecr: meta
+    #!/bin/bash -e
     aws cloudformation deploy --stack-name "{{stack_name}}" \
       --template-file "{{justfile_directory()}}/infra/ecr.yaml" \
       --parameter-overrides "Name={{image_name}}"
+    outputs=$(aws cloudformation describe-stacks --stack-name "{{stack_name}}" \
+      | jq -r '.Stacks[0].Outputs | map({(.OutputKey): .OutputValue}) | add')
+    repo=$(jq -r '.RepositoryUri' <<< "$outputs")
+    jq --arg repo "$repo" '.repo = $repo' meta.json | sponge meta.json
 
-delete-ecr:
+delete-ecr: meta
     #!/bin/bash -e
     aws cloudformation delete-stack --stack-name "{{stack_name}}"
     while aws cloudformation describe-stacks --stack-name "{{stack_name}}" > /dev/null 2>&1; do
         echo "Stack {{stack_name}} still exists, waiting..."
         sleep 5
     done
+    jq 'del(.repo)' meta.json | sponge meta.json
+
+build-image: meta
+    #!/bin/bash -e
+    repo=$(jq -r '.repo' meta.json)
+    image="$repo:{{image_tag}}"
+    echo "Building image $image"
+    podman build . -t "$image"
+    jq --arg image "$image" '.image = $image' meta.json | sponge meta.json
+
+deploy: meta
+    #!/bin/bash -e
+    image=$(jq -r '.image' meta.json)
+    account_id=$(aws sts get-caller-identity | jq -r '.Account')
+    aws ecr get-login-password | podman login --username AWS --password-stdin "${account_id}.dkr.ecr.{{region}}.amazonaws.com"
+    podman push "$image"
+    echo "Deploying image $image"
+    cd infra && tofu init && tofu apply -auto-approve -var "image=$image" -var-file="dev.tfvars"
+
+[working-directory: "infra"]
+tf-destroy:
+    tofu destroy -auto-approve -var "image=tmp" -var-file="dev.tfvars"
+
+tf-fmt:
+    tofu fmt -recursive "{{justfile_directory()}}/infra"
