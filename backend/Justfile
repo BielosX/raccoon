@@ -3,7 +3,7 @@ stack_name := "raccoon-ecr"
 region := env("AWS_REGION", "eu-west-1")
 timestamp := `date +%s`
 image_tag := env("IMAGE_TAG", timestamp)
-
+ecr_justfile := justfile_directory() + "/../ecr/Justfile"
 export AWS_REGION := region
 export AWS_PAGER := ""
 
@@ -12,21 +12,12 @@ meta:
 
 create-ecr: meta
     #!/bin/bash -e
-    aws cloudformation deploy --stack-name "{{stack_name}}" \
-      --template-file "{{justfile_directory()}}/infra/ecr.yaml" \
-      --parameter-overrides "Name={{image_name}}"
-    outputs=$(aws cloudformation describe-stacks --stack-name "{{stack_name}}" \
-      | jq -r '.Stacks[0].Outputs | map({(.OutputKey): .OutputValue}) | add')
-    repo=$(jq -r '.RepositoryUri' <<< "$outputs")
+    just -f "{{ecr_justfile}}"  deploy "{{stack_name}}" "{{image_name}}"
+    repo=$(just -f "{{ecr_justfile}}" get-uri "{{stack_name}}")
     jq --arg repo "$repo" '.repo = $repo' meta.json | sponge meta.json
 
 delete-ecr: meta
-    #!/bin/bash -e
-    aws cloudformation delete-stack --stack-name "{{stack_name}}"
-    while aws cloudformation describe-stacks --stack-name "{{stack_name}}" > /dev/null 2>&1; do
-        echo "Stack {{stack_name}} still exists, waiting..."
-        sleep 5
-    done
+    just -f "{{ecr_justfile}}" destroy "{{stack_name}}"
     jq 'del(.repo)' meta.json | sponge meta.json
 
 build-image: meta

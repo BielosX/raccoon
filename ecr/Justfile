@@ -1,0 +1,24 @@
+region := env("AWS_REGION", "eu-west-1")
+
+export AWS_REGION := region
+export AWS_PAGER := ""
+
+deploy stack name:
+    #!/bin/bash -e
+    aws cloudformation deploy --stack-name "{{stack}}" \
+      --template-file "{{justfile_directory()}}/ecr.yaml" \
+      --parameter-overrides "Name={{name}}"
+
+get-uri stack:
+    #!/bin/bash -e
+    outputs=$(aws cloudformation describe-stacks --stack-name "{{stack}}" \
+      | jq -r '.Stacks[0].Outputs | map({(.OutputKey): .OutputValue}) | add')
+    jq -r '.RepositoryUri' <<< "$outputs"
+
+destroy stack:
+    #!/bin/bash -e
+    aws cloudformation delete-stack --stack-name "{{stack}}"
+    while aws cloudformation describe-stacks --stack-name "{{stack}}" > /dev/null 2>&1; do
+        echo "Stack {{stack}} still exists, waiting..."
+        sleep 5
+    done
