@@ -83,7 +83,7 @@ resource "aws_ecs_service" "service" {
     security_groups = var.security_groups
   }
   dynamic "load_balancer" {
-    for_each = var.load_balancers
+    for_each = var.target_groups
     content {
       container_name   = load_balancer.value.container_name
       container_port   = load_balancer.value.container_port

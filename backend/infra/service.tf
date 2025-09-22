@@ -4,13 +4,46 @@ locals {
   uid            = "1001"
 }
 
+resource "aws_lb_target_group" "group" {
+  target_type = "ip"
+  protocol    = "HTTP"
+  port        = local.container_port
+  vpc_id      = local.vpc_id
+  health_check {
+    enabled             = true
+    path                = "/health"
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    interval            = 30
+    timeout             = 2
+  }
+  tags = {
+    Service = "raccoon"
+  }
+}
+
+resource "aws_lb_listener_rule" "rule" {
+  listener_arn = local.listener_arn
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.group.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*"]
+    }
+  }
+}
+
 resource "aws_security_group" "service_sg" {
   vpc_id = local.vpc_id
   ingress {
-    security_groups = [aws_security_group.alb_sg.id]
-    protocol        = "tcp"
-    from_port       = local.container_port
-    to_port         = local.container_port
+    cidr_blocks = [local.vpc_cidr]
+    protocol    = "tcp"
+    from_port   = local.container_port
+    to_port     = local.container_port
   }
   egress {
     cidr_blocks = ["0.0.0.0/0"]
@@ -21,7 +54,6 @@ resource "aws_security_group" "service_sg" {
 }
 
 module "service" {
-  depends_on    = [aws_lb.alb]
   source        = "../../ecs_service"
   name          = "raccoon"
   cluster_name  = var.cluster_name
@@ -40,7 +72,7 @@ module "service" {
       PORT = local.container_port
     }
   }]
-  load_balancers = [{
+  target_groups = [{
     container_name   = local.main_container
     container_port   = local.container_port
     target_group_arn = aws_lb_target_group.group.arn

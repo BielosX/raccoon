@@ -18,7 +18,7 @@ variable "container_definitions" {
   }))
 }
 
-variable "load_balancers" {
+variable "target_groups" {
   type = list(object({
     container_name   = string
     container_port   = number
