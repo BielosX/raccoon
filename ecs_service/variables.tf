@@ -8,13 +8,16 @@ variable "cluster_name" {
 
 variable "container_definitions" {
   type = list(object({
-    name           = string
-    environment    = map(string)
-    container_port = number
-    essential      = bool
-    privileged     = bool
-    image          = string
-    user           = string
+    name        = string
+    environment = map(string)
+    port_mappings = list(object({
+      container_port = number
+      name           = optional(string)
+    }))
+    essential  = bool
+    privileged = bool
+    image      = string
+    user       = string
   }))
 }
 
@@ -53,4 +56,16 @@ variable "security_groups" {
 variable "enable_exec_command" {
   type    = bool
   default = false
+}
+
+variable "service_connect" {
+  type = object({
+    namespace = string
+    services = list(object({
+      port_name      = string
+      discovery_name = string
+      port           = string
+    }))
+  })
+  default = null
 }

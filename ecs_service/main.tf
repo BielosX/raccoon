@@ -50,11 +50,10 @@ resource "aws_ecs_task_definition" "task_definition" {
       name  = tostring(k)
       value = tostring(v)
     }]
-    portMappings = [
-      {
-        containerPort = d.container_port
-      }
-    ]
+    portMappings = [for p in d.port_mappings : {
+      containerPort = p.container_port
+      name          = p.name
+    }]
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -82,6 +81,23 @@ resource "aws_ecs_service" "service" {
   network_configuration {
     subnets         = var.subnets
     security_groups = var.security_groups
+  }
+  dynamic "service_connect_configuration" {
+    for_each = var.service_connect == null ? [] : [1]
+    content {
+      enabled   = true
+      namespace = var.service_connect.namespace
+      dynamic "service" {
+        for_each = var.service_connect.services
+        content {
+          port_name      = service.value.port_name
+          discovery_name = service.value.discovery_name
+          client_alias {
+            port = service.value.port
+          }
+        }
+      }
+    }
   }
   dynamic "load_balancer" {
     for_each = var.target_groups

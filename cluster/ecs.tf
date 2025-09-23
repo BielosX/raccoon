@@ -12,3 +12,7 @@ resource "aws_ecs_cluster_capacity_providers" "providers" {
     weight            = 100
   }
 }
+
+resource "aws_service_discovery_http_namespace" "default" {
+  name = "default"
+}

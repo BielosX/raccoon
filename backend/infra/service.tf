@@ -1,7 +1,10 @@
 locals {
-  main_container = "main"
-  container_port = 8080
-  uid            = "1001"
+  main_container      = "main"
+  container_port      = 8080
+  container_port_name = "http"
+  uid                 = "1001"
+  service_name        = "raccoon"
+  health_path         = "/health"
 }
 
 resource "aws_lb_target_group" "group" {
@@ -11,14 +14,14 @@ resource "aws_lb_target_group" "group" {
   vpc_id      = local.vpc_id
   health_check {
     enabled             = true
-    path                = "/health"
+    path                = local.health_path
     healthy_threshold   = 2
     unhealthy_threshold = 3
     interval            = 30
     timeout             = 2
   }
   tags = {
-    Service = "raccoon"
+    Service = local.service_name
   }
 }
 
@@ -55,19 +58,30 @@ resource "aws_security_group" "service_sg" {
 
 module "service" {
   source        = "../../ecs_service"
-  name          = "raccoon"
+  name          = local.service_name
   cluster_name  = var.cluster_name
   desired_count = 2
   cpu           = 256
   memory        = 512
   region        = var.region
+  service_connect = {
+    namespace = local.default_namespace_arn
+    services = [{
+      discovery_name = local.service_name
+      port_name      = local.container_port_name
+      port           = local.container_port
+    }]
+  }
   container_definitions = [{
-    name           = local.main_container
-    essential      = true
-    image          = var.image
-    privileged     = false
-    user           = local.uid
-    container_port = local.container_port
+    name       = local.main_container
+    essential  = true
+    image      = var.image
+    privileged = false
+    user       = local.uid
+    port_mappings = [{
+      container_port = local.container_port
+      name           = local.container_port_name
+    }]
     environment = {
       PORT = local.container_port
     }
