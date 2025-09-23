@@ -74,10 +74,11 @@ resource "aws_ecs_task_definition" "task_definition" {
 }
 
 resource "aws_ecs_service" "service" {
-  name            = var.name
-  cluster         = var.cluster_name
-  task_definition = aws_ecs_task_definition.task_definition.id
-  desired_count   = var.desired_count
+  name                   = var.name
+  cluster                = var.cluster_name
+  task_definition        = aws_ecs_task_definition.task_definition.id
+  desired_count          = var.desired_count
+  enable_execute_command = var.enable_exec_command
   network_configuration {
     subnets         = var.subnets
     security_groups = var.security_groups

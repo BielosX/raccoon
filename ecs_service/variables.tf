@@ -49,3 +49,8 @@ variable "subnets" {
 variable "security_groups" {
   type = list(string)
 }
+
+variable "enable_exec_command" {
+  type    = bool
+  default = false
+}
