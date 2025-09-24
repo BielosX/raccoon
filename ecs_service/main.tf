@@ -46,6 +46,14 @@ resource "aws_ecs_task_definition" "task_definition" {
     image      = d.image
     privileged = d.privileged
     user       = d.user
+    secrets = [for s in d.secrets : {
+      name      = s.name
+      valueFrom = s.value_from
+    }]
+    dependsOn = [for e in d.depends_on : {
+      condtion      = e.condition
+      containerName = e.container_name
+    }]
     environment = [for k, v in d.environment : {
       name  = tostring(k)
       value = tostring(v)

@@ -9,11 +9,19 @@ variable "cluster_name" {
 variable "container_definitions" {
   type = list(object({
     name        = string
-    environment = map(string)
-    port_mappings = list(object({
+    environment = optional(map(string), {})
+    depends_on = optional(list(object({
+      condition      = string
+      container_name = string
+    })), [])
+    secrets = optional(list(object({
+      name       = string
+      value_from = string
+    })), [])
+    port_mappings = optional(list(object({
       container_port = number
       name           = optional(string)
-    }))
+    })), [])
     essential  = bool
     privileged = bool
     image      = string
