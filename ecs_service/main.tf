@@ -24,12 +24,14 @@ data "aws_iam_policy_document" "execution_role" {
 }
 
 resource "aws_iam_role" "execution_role" {
+  count              = var.create_execution_role ? 1 : 0
   assume_role_policy = data.aws_iam_policy_document.execution_role.json
 }
 
 resource "aws_iam_role_policy_attachment" "attachment" {
+  count      = var.create_execution_role ? 1 : 0
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-  role       = aws_iam_role.execution_role.id
+  role       = one(aws_iam_role.execution_role).id
 }
 
 /*
@@ -37,15 +39,20 @@ resource "aws_iam_role_policy_attachment" "attachment" {
   Task Role -> API calls from Task (S3, DynamoDB etc.)
  */
 resource "aws_ecs_task_definition" "task_definition" {
-  execution_role_arn = aws_iam_role.execution_role.arn
+  execution_role_arn = var.create_execution_role ? one(aws_iam_role.execution_role).id : var.execution_role_arn
   cpu                = var.cpu
   memory             = var.memory
+  task_role_arn      = var.task_role_arn
   container_definitions = jsonencode([for d in var.container_definitions : {
     name       = d.name
     essential  = d.essential
     image      = d.image
     privileged = d.privileged
     user       = d.user
+    command    = d.command
+    linuxParameters = d.linux_parameters == null ? null : {
+      initProcessEnabled = d.linux_parameters.init_process_enabled
+    }
     secrets = [for s in d.secrets : {
       name      = s.name
       valueFrom = s.value_from
@@ -81,11 +88,12 @@ resource "aws_ecs_task_definition" "task_definition" {
 }
 
 resource "aws_ecs_service" "service" {
-  name                   = var.name
-  cluster                = var.cluster_name
-  task_definition        = aws_ecs_task_definition.task_definition.id
-  desired_count          = var.desired_count
-  enable_execute_command = var.enable_exec_command
+  name                              = var.name
+  cluster                           = var.cluster_name
+  task_definition                   = aws_ecs_task_definition.task_definition.id
+  desired_count                     = var.desired_count
+  enable_execute_command            = var.enable_exec_command
+  health_check_grace_period_seconds = var.health_check_grace_period_seconds
   network_configuration {
     subnets         = var.subnets
     security_groups = var.security_groups

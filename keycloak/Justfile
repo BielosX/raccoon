@@ -1,0 +1,28 @@
+cluster_name := "raccoon"
+region := env("AWS_REGION", "eu-west-1")
+
+export AWS_REGION := region
+export AWS_PAGER := ""
+
+[working-directory: "infra"]
+tf-destroy:
+    tofu destroy -auto-approve -var-file="dev.tfvars"
+
+[working-directory: "infra"]
+tf-apply:
+    tofu apply -auto-approve -var-file="dev.tfvars"
+
+[working-directory: "infra"]
+tf-fmt:
+    tofu fmt -recursive .
+
+port-forward:
+    #!/bin/bash -e
+    task_arn=$(aws ecs list-tasks --cluster "{{cluster_name}}" --service-name keycloak | jq -r '.taskArns[0]')
+    task_id=$(cut -d/ -f3 <<< "$task_arn")
+    task=$(aws ecs describe-tasks --cluster "{{cluster_name}}" --tasks "$task_arn")
+    runtime_id=$(jq -r '.tasks[0].containers[] | select(.name == "main") | .runtimeId' <<< "$task")
+    aws ssm start-session \
+        --target "ecs:{{cluster_name}}_${task_id}_${runtime_id}" \
+        --document-name AWS-StartPortForwardingSessionToRemoteHost \
+        --parameters '{"portNumber":["8080"], "localPortNumber": ["8080"]}'

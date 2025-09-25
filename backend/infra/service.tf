@@ -57,13 +57,14 @@ resource "aws_security_group" "service_sg" {
 }
 
 module "service" {
-  source        = "../../ecs_service"
-  name          = local.service_name
-  cluster_name  = var.cluster_name
-  desired_count = 2
-  cpu           = 256
-  memory        = 512
-  region        = var.region
+  source                = "../../ecs_service"
+  name                  = local.service_name
+  cluster_name          = var.cluster_name
+  desired_count         = 2
+  cpu                   = 256
+  memory                = 512
+  region                = var.region
+  create_execution_role = true
   service_connect = {
     namespace = local.default_namespace_arn
     services = [{
