@@ -1,7 +1,11 @@
 region := env("AWS_REGION", "eu-west-1")
+meta_path := justfile_directory() + "/meta.json"
 
 export AWS_REGION := region
 export AWS_PAGER := ""
+
+meta:
+    [ -f "{{meta_path}}" ] || echo "{}" > "{{meta_path}}"
 
 build:
     npm run build
@@ -11,15 +15,18 @@ tf-fmt:
     tofu fmt -recursive .
 
 [working-directory: "infra"]
-tf-apply:
+tf-apply: meta
+    #!/bin/bash -e
     tofu init
     tofu apply -auto-approve -var-file="dev.tfvars"
+    bucket=$(tofu output -raw 'bucket_name')
+    jq --arg bucket "$bucket" '.bucket = $bucket' "{{meta_path}}" | sponge "{{meta_path}}"
 
 [working-directory: "infra"]
 tf-destroy:
     tofu destroy -auto-approve -var-file="dev.tfvars"
 
-deploy: build tf-apply
+deploy: meta
     #!/bin/bash -e
-    bucket=$(tofu output -state="{{justfile_directory()}}/infra/terraform.tfstate" -raw 'bucket_name')
+    bucket=$(jq -r '.bucket' "{{meta_path}}")
     aws s3 cp --recursive "{{justfile_directory()}}/dist/" "s3://${bucket}/"

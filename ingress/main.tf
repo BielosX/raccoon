@@ -19,8 +19,18 @@ data "terraform_remote_state" "cluster" {
   }
 }
 
+data "terraform_remote_state" "frontend" {
+  backend = "local"
+  config = {
+    path = "${path.module}/../frontend/infra/terraform.tfstate"
+  }
+}
+
 locals {
-  vpc_id             = data.terraform_remote_state.cluster.outputs.vpc_id
-  private_subnet_ids = data.terraform_remote_state.cluster.outputs.private_subnet_ids
-  vpc_cidr           = data.terraform_remote_state.cluster.outputs.vpc_cidr
+  vpc_id                      = data.terraform_remote_state.cluster.outputs.vpc_id
+  private_subnet_ids          = data.terraform_remote_state.cluster.outputs.private_subnet_ids
+  vpc_cidr                    = data.terraform_remote_state.cluster.outputs.vpc_cidr
+  bucket_name                 = data.terraform_remote_state.frontend.outputs.bucket_name
+  bucket_arn                  = data.terraform_remote_state.frontend.outputs.bucket_arn
+  bucket_regional_domain_name = data.terraform_remote_state.frontend.outputs.bucket_regional_domain_name
 }
