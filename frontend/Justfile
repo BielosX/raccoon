@@ -1,0 +1,25 @@
+region := env("AWS_REGION", "eu-west-1")
+
+export AWS_REGION := region
+export AWS_PAGER := ""
+
+build:
+    npm run build
+
+[working-directory: "infra"]
+tf-fmt:
+    tofu fmt -recursive .
+
+[working-directory: "infra"]
+tf-apply:
+    tofu init
+    tofu apply -auto-approve -var-file="dev.tfvars"
+
+[working-directory: "infra"]
+tf-destroy:
+    tofu destroy -auto-approve -var-file="dev.tfvars"
+
+deploy: build tf-apply
+    #!/bin/bash -e
+    bucket=$(tofu output -state="{{justfile_directory()}}/infra/terraform.tfstate" -raw 'bucket_name')
+    aws s3 cp --recursive "{{justfile_directory()}}/dist/" "s3://${bucket}/"
