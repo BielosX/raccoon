@@ -26,3 +26,10 @@ port-forward:
         --target "ecs:{{cluster_name}}_${task_id}_${runtime_id}" \
         --document-name AWS-StartPortForwardingSessionToRemoteHost \
         --parameters '{"portNumber":["8080"], "localPortNumber": ["8080"]}'
+
+delete-secret:
+    aws secretsmanager delete-secret \
+        --secret-id "/raccoon/keycloak/admin-password" \
+        --force-delete-without-recovery
+
+destroy: tf-destroy delete-secret
