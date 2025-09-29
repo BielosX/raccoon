@@ -12,9 +12,10 @@ import (
 )
 
 type Server struct {
-	Port     int
-	LogLevel string
-	logger   *zap.Logger
+	Port         int
+	LogLevel     string
+	logger       *zap.Logger
+	WsPathPrefix string
 }
 
 func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
@@ -48,6 +49,10 @@ func (s *Server) Serve() {
 		WriteString(w, "OK", http.StatusOK)
 	})
 	http.Handle("/", router)
+	wsRouter := router.PathPrefix(s.WsPathPrefix).Subrouter()
+	wsRouter.HandleFunc("/chat", func(w http.ResponseWriter, _ *http.Request) {
+		WriteString(w, "Hello", http.StatusOK)
+	})
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", s.Port))
 	if err != nil {
 		logger.Error("Failed to listen", zap.Error(err))

@@ -4,6 +4,7 @@ locals {
   container_port      = 8080
   main_container      = "main"
   management_port     = 9000
+  path_prefix         = "/app/auth"
 }
 
 resource "aws_lb_target_group" "group" {
@@ -57,7 +58,7 @@ resource "aws_lb_listener_rule" "rule" {
 
   condition {
     path_pattern {
-      values = ["/auth/*"]
+      values = ["${local.path_prefix}/*"]
     }
   }
 }
@@ -165,6 +166,7 @@ module "service" {
       KC_BOOTSTRAP_ADMIN_USERNAME = "admin"
       KC_HEALTH_ENABLED           = "true"
       KC_HTTP_MANAGEMENT_PORT     = local.management_port
+      KC_HTTP_RELATIVE_PATH       = local.path_prefix
     }
     secrets = [{
       name       = "KC_BOOTSTRAP_ADMIN_PASSWORD"

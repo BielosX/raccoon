@@ -5,6 +5,7 @@ locals {
   uid                 = "1001"
   service_name        = "raccoon"
   health_path         = "/health"
+  path_prefix         = "/app/ws"
 }
 
 resource "aws_lb_target_group" "group" {
@@ -33,9 +34,12 @@ resource "aws_lb_listener_rule" "rule" {
     target_group_arn = aws_lb_target_group.group.arn
   }
 
+  /*
+    ALB does not provide path rewriter. App should expose endpoints prefixed with /app/ws
+   */
   condition {
     path_pattern {
-      values = ["/api/*"]
+      values = ["${local.path_prefix}/*"]
     }
   }
 }
@@ -84,7 +88,8 @@ module "service" {
       name           = local.container_port_name
     }]
     environment = {
-      PORT = local.container_port
+      PORT           = local.container_port
+      WS_PATH_PREFIX = local.path_prefix
     }
   }]
   target_groups = [{

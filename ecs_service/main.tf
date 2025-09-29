@@ -39,7 +39,7 @@ resource "aws_iam_role_policy_attachment" "attachment" {
   Task Role -> API calls from Task (S3, DynamoDB etc.)
  */
 resource "aws_ecs_task_definition" "task_definition" {
-  execution_role_arn = var.create_execution_role ? one(aws_iam_role.execution_role).id : var.execution_role_arn
+  execution_role_arn = var.create_execution_role ? one(aws_iam_role.execution_role).arn : var.execution_role_arn
   cpu                = var.cpu
   memory             = var.memory
   task_role_arn      = var.task_role_arn

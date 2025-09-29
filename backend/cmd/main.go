@@ -17,6 +17,7 @@ func main() {
 		os.Exit(1)
 	}
 	logLevel := internal.GetEnvOrDefault("LOG_LEVEL", "info")
-	server := internal.Server{Port: port, LogLevel: logLevel}
+	wsPathPrefix := internal.GetEnvOrDefault("WS_PATH_PREFIX", "")
+	server := internal.Server{Port: port, LogLevel: logLevel, WsPathPrefix: wsPathPrefix}
 	server.Serve()
 }
