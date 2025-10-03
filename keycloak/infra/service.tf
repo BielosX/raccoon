@@ -7,6 +7,7 @@ locals {
 }
 
 resource "aws_lb_target_group" "group" {
+  depends_on  = [aws_lb.alb]
   target_type = "ip"
   protocol    = "HTTP"
   port        = local.container_port
