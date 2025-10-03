@@ -9,3 +9,8 @@ variable "cluster_name" {
 variable "image" {
   type = string
 }
+
+variable "admin_ip" {
+  type    = string
+  default = ""
+}

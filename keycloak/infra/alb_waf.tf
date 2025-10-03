@@ -1,8 +1,16 @@
+resource "aws_wafv2_ip_set" "admin_ip" {
+  name               = "admin-allowed-ip"
+  scope              = "REGIONAL"
+  ip_address_version = "IPV4"
+  addresses          = ["${var.admin_ip}/32"]
+}
+
 resource "aws_wafv2_web_acl" "alb_waf" {
   name_prefix = "alb-block-auth-admin-"
   scope       = "REGIONAL"
+
   default_action {
-    allow {}
+    block {}
   }
 
   rule {
@@ -28,29 +36,64 @@ resource "aws_wafv2_web_acl" "alb_waf" {
     name     = "BlockAdmin"
     priority = 2
     action {
-      block {}
+      allow {}
     }
     statement {
-      byte_match_statement {
-        search_string = "/admin"
-        field_to_match {
-          uri_path {}
+      and_statement {
+        statement {
+          ip_set_reference_statement {
+            arn = aws_wafv2_ip_set.admin_ip.arn
+          }
         }
-        text_transformation {
-          priority = 0
-          type     = "URL_DECODE"
+        statement {
+          byte_match_statement {
+            search_string = "/admin"
+            field_to_match {
+              uri_path {}
+            }
+            text_transformation {
+              priority = 0
+              type     = "URL_DECODE"
+            }
+            text_transformation {
+              priority = 1
+              type     = "LOWERCASE"
+            }
+            positional_constraint = "STARTS_WITH"
+          }
         }
-        text_transformation {
-          priority = 1
-          type     = "LOWERCASE"
-        }
-        positional_constraint = "STARTS_WITH"
       }
     }
 
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "BlockAdmin"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "AllowPublicPaths"
+    priority = 3
+    action {
+      allow {}
+    }
+    statement {
+      byte_match_statement {
+        search_string = "/"
+        field_to_match {
+          uri_path {}
+        }
+        text_transformation {
+          priority = 0
+          type     = "NONE"
+        }
+        positional_constraint = "STARTS_WITH"
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AllowPublicPaths"
       sampled_requests_enabled   = true
     }
   }

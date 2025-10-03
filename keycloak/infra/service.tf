@@ -151,7 +151,8 @@ module "service" {
       KC_HEALTH_ENABLED           = "true"
       KC_HTTP_MANAGEMENT_PORT     = local.management_port
       KC_HOSTNAME                 = aws_apigatewayv2_stage.default.invoke_url
-      KC_HOSTNAME_ADMIN           = "localhost:${local.container_port}"
+      KC_HTTP_ENABLED             = "true"
+      KC_PROXY_HEADERS            = "xforwarded"
     }
     secrets = [{
       name       = "KC_BOOTSTRAP_ADMIN_PASSWORD"

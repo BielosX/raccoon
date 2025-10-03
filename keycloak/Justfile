@@ -10,7 +10,9 @@ tf-destroy:
 
 [working-directory: "infra"]
 tf-apply:
-    tofu apply -auto-approve -var-file="dev.tfvars"
+    #!/bin/bash -e
+    my_ip=$(curl https://ifconfig.me)
+    tofu apply -auto-approve -var-file="dev.tfvars" -var "admin_ip=$my_ip"
 
 [working-directory: "infra"]
 tf-fmt:
