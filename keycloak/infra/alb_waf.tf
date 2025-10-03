@@ -6,14 +6,33 @@ resource "aws_wafv2_web_acl" "alb_waf" {
   }
 
   rule {
-    name     = "BlockAuthAdmin"
+    name     = "RateLimit"
     priority = 1
     action {
       block {}
     }
     statement {
+      rate_based_statement {
+        limit              = 500
+        aggregate_key_type = "IP"
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "RateLimit"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "BlockAdmin"
+    priority = 2
+    action {
+      block {}
+    }
+    statement {
       byte_match_statement {
-        search_string = "/auth/admin"
+        search_string = "/admin"
         field_to_match {
           uri_path {}
         }
@@ -31,7 +50,7 @@ resource "aws_wafv2_web_acl" "alb_waf" {
 
     visibility_config {
       cloudwatch_metrics_enabled = true
-      metric_name                = "BlockAuthAdmin"
+      metric_name                = "BlockAdmin"
       sampled_requests_enabled   = true
     }
   }
@@ -44,6 +63,6 @@ resource "aws_wafv2_web_acl" "alb_waf" {
 }
 
 resource "aws_wafv2_web_acl_association" "alb_waf_association" {
-  resource_arn = local.alb_arn
+  resource_arn = aws_lb.alb.arn
   web_acl_arn  = aws_wafv2_web_acl.alb_waf.arn
 }

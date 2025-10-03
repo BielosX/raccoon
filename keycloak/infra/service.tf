@@ -4,7 +4,6 @@ locals {
   container_port      = 8080
   main_container      = "main"
   management_port     = 9000
-  path_prefix         = "/app/auth"
 }
 
 resource "aws_lb_target_group" "group" {
@@ -29,10 +28,10 @@ resource "aws_lb_target_group" "group" {
 resource "aws_security_group" "service_sg" {
   vpc_id = local.vpc_id
   ingress {
-    cidr_blocks = [local.vpc_cidr]
-    protocol    = "tcp"
-    from_port   = local.container_port
-    to_port     = local.container_port
+    security_groups = [aws_security_group.alb_sg.id]
+    protocol        = "tcp"
+    from_port       = local.container_port
+    to_port         = local.container_port
   }
   ingress {
     cidr_blocks = [local.vpc_cidr]
@@ -45,21 +44,6 @@ resource "aws_security_group" "service_sg" {
     protocol    = "tcp"
     from_port   = 443
     to_port     = 443
-  }
-}
-
-resource "aws_lb_listener_rule" "rule" {
-  listener_arn = local.listener_arn
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.group.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["${local.path_prefix}/*"]
-    }
   }
 }
 
@@ -166,7 +150,8 @@ module "service" {
       KC_BOOTSTRAP_ADMIN_USERNAME = "admin"
       KC_HEALTH_ENABLED           = "true"
       KC_HTTP_MANAGEMENT_PORT     = local.management_port
-      KC_HTTP_RELATIVE_PATH       = local.path_prefix
+      KC_HOSTNAME                 = aws_apigatewayv2_stage.default.invoke_url
+      KC_HOSTNAME_ADMIN           = "localhost:${local.container_port}"
     }
     secrets = [{
       name       = "KC_BOOTSTRAP_ADMIN_PASSWORD"

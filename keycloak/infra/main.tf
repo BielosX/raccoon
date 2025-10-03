@@ -30,7 +30,5 @@ locals {
   vpc_id                = data.terraform_remote_state.cluster.outputs.vpc_id
   private_subnet_ids    = data.terraform_remote_state.cluster.outputs.private_subnet_ids
   vpc_cidr              = data.terraform_remote_state.cluster.outputs.vpc_cidr
-  listener_arn          = data.terraform_remote_state.ingress.outputs.listener_arn
   default_namespace_arn = data.terraform_remote_state.cluster.outputs.default_namespace_arn
-  alb_arn               = data.terraform_remote_state.ingress.outputs.alb_arn
 }
