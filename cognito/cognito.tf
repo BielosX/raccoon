@@ -1,0 +1,22 @@
+resource "aws_cognito_user_pool" "pool" {
+  name           = "raccoon-pool"
+  user_pool_tier = "LITE"
+}
+
+resource "aws_cognito_user_pool_domain" "domain" {
+  domain                = "raccoon"
+  user_pool_id          = aws_cognito_user_pool.pool.id
+  managed_login_version = 1
+}
+
+resource "aws_cognito_user_pool_client" "client" {
+  name                                 = "frontend"
+  generate_secret                      = false
+  user_pool_id                         = aws_cognito_user_pool.pool.id
+  callback_urls                        = ["https://${local.domain}/callback"]
+  logout_urls                          = ["https://${local.domain}/logout"]
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "profile", "email"]
+  allowed_oauth_flows_user_pool_client = true
+  supported_identity_providers         = ["COGNITO"]
+}
