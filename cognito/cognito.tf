@@ -20,3 +20,21 @@ resource "aws_cognito_user_pool_client" "client" {
   allowed_oauth_flows_user_pool_client = true
   supported_identity_providers         = ["COGNITO"]
 }
+
+resource "aws_cognito_user_pool_client" "admin_client" {
+  name         = "admin-client"
+  user_pool_id = aws_cognito_user_pool.pool.id
+  explicit_auth_flows = [
+    "ALLOW_ADMIN_USER_PASSWORD_AUTH",
+  ]
+  generate_secret        = false
+  access_token_validity  = 10
+  id_token_validity      = 10
+  refresh_token_validity = 1
+  token_validity_units {
+    id_token      = "minutes"
+    access_token  = "minutes"
+    refresh_token = "hours"
+  }
+  supported_identity_providers = ["COGNITO"]
+}

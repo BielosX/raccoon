@@ -1,3 +1,6 @@
+tools-dir := justfile_directory() + "/bin"
+golangci-lint-version := "v2.5.0"
+golangci-lint-install-url := "https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh"
 image_name := "raccoon"
 stack_name := "raccoon-ecr"
 region := env("AWS_REGION", "eu-west-1")
@@ -6,6 +9,17 @@ image_tag := env("IMAGE_TAG", timestamp)
 ecr_justfile := justfile_directory() + "/../ecr/Justfile"
 export AWS_REGION := region
 export AWS_PAGER := ""
+
+go-tools:
+    mkdir -p "{{tools-dir}}"
+    GOBIN="{{tools-dir}}" go install golang.org/x/tools/cmd/goimports@latest
+    GOBIN="{{tools-dir}}" go install github.com/segmentio/golines@latest
+    curl -sSfL "{{golangci-lint-install-url}}" | sh -s -- -b "{{tools-dir}}" "{{golangci-lint-version}}"
+
+go-qual: go-tools
+    {{tools-dir}}/goimports -w .
+    {{tools-dir}}/golines -w .
+    {{tools-dir}}/golangci-lint run cmd internal
 
 meta:
     [ -f meta.json ] || echo "{}" > meta.json
@@ -19,6 +33,9 @@ create-ecr: meta
 delete-ecr: meta
     just -f "{{ecr_justfile}}" destroy "{{stack_name}}"
     jq 'del(.repo)' meta.json | sponge meta.json
+
+build:
+    go build -o bin/main ./cmd/main.go
 
 build-image: meta
     #!/bin/bash -e

@@ -11,3 +11,26 @@ tf-apply:
 
 tf-destroy:
     tofu destroy -auto-approve -var-file="dev.tfvars"
+
+create-user user password:
+    #!/bin/bash -e
+    pool_id=$(tofu output -raw user_pool_id)
+    aws cognito-idp admin-create-user \
+      --user-pool-id "$pool_id" \
+      --username "{{user}}" \
+      --temporary-password "{{password}}"
+    aws cognito-idp admin-set-user-password \
+      --user-pool-id "$pool_id" \
+      --username "{{user}}" \
+      --password "{{password}}" \
+      --permanent
+
+get-token user password:
+    #!/bin/bash -e
+    pool_id=$(tofu output -raw user_pool_id)
+    client_id=$(tofu output -raw admin_client_id)
+    aws cognito-idp admin-initiate-auth \
+      --user-pool-id "$pool_id" \
+      --client-id "$client_id" \
+      --auth-flow ADMIN_USER_PASSWORD_AUTH \
+      --auth-parameters USERNAME="{{user}}",PASSWORD="{{password}}"

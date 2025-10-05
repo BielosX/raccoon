@@ -1,23 +1,14 @@
 package main
 
 import (
-	"os"
 	"raccoon/internal"
-	"strconv"
 )
 
-const maxPort = 65535
-
 func main() {
-	portStr := internal.GetEnvOrDefault("PORT", "8080")
-	port, err := strconv.Atoi(portStr)
-	internal.ExpectNil(err)
-	if port > maxPort {
-		internal.PrintfStderr("port must be less than %d\n", maxPort)
-		os.Exit(1)
+	conf, err := internal.LoadConfig()
+	if err != nil {
+		panic(err)
 	}
-	logLevel := internal.GetEnvOrDefault("LOG_LEVEL", "info")
-	wsPathPrefix := internal.GetEnvOrDefault("WS_PATH_PREFIX", "")
-	server := internal.Server{Port: port, LogLevel: logLevel, WsPathPrefix: wsPathPrefix}
+	server := internal.Server{Config: conf}
 	server.Serve()
 }

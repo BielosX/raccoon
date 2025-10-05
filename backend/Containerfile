@@ -9,5 +9,6 @@ RUN adduser -u 1001 -s /bin/bash -D raccoon
 FROM scratch
 COPY --from=builder /workspace/bin/main /bin/main
 COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 USER 1001
 CMD ["/bin/main"]

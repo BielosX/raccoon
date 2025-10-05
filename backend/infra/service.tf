@@ -90,6 +90,10 @@ module "service" {
     environment = {
       PORT           = local.container_port
       WS_PATH_PREFIX = local.path_prefix
+      # noinspection HILUnresolvedReference
+      OPENID_CONFIGURATION_URL = local.discovery_endpoints.openid_configuration
+      # noinspection HILUnresolvedReference
+      JWKS_URL = local.discovery_endpoints.jwks
     }
   }]
   target_groups = [{
