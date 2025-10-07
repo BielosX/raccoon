@@ -14,6 +14,8 @@ func SetupRoutes(config *Config, logger *zap.Logger, validator *TokenValidator) 
 	router.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		WriteString(w, "OK", http.StatusOK)
 	})
-	NewChatRouter(logger, router, config.WsPathPrefix, validator)
+	//apiRouter := router.PathPrefix(config.ApiPathPrefix).Subrouter()
+	wsRouter := router.PathPrefix(config.WsPathPrefix).Subrouter()
+	NewChatRouter(logger, wsRouter, validator)
 	return router
 }

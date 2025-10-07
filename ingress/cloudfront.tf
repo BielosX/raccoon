@@ -1,6 +1,7 @@
 locals {
   frontend_origin_id = "s3-frontend"
   alb_origin_id      = "alb-backend"
+  backend_patterns   = ["/api/*", "/ws/*"]
 }
 
 module "distribution" {
@@ -25,8 +26,8 @@ module "distribution" {
     managed_cache_policy          = "CachingOptimized"
     managed_origin_request_policy = "CORS-S3Origin"
   }
-  ordered_cache_behaviors = [{
-    path_pattern                  = "/app/*"
+  ordered_cache_behaviors = [for pattern in local.backend_patterns : {
+    path_pattern                  = pattern
     allowed_methods               = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods                = ["GET", "HEAD"]
     target_origin_id              = local.alb_origin_id

@@ -14,9 +14,8 @@ type ChatRouter struct {
 
 func NewChatRouter(logger *zap.Logger,
 	rootRouter *mux.Router,
-	pathPrefix string,
 	validator *TokenValidator) *ChatRouter {
-	router := rootRouter.PathPrefix(pathPrefix).Subrouter()
+	router := rootRouter.PathPrefix("/chat").Subrouter()
 	router.Use(validator.ValidatingMiddleware)
 	chatRouter := &ChatRouter{logger: logger,
 		router: router}
@@ -25,7 +24,7 @@ func NewChatRouter(logger *zap.Logger,
 }
 
 func (r *ChatRouter) registerRoutes() {
-	r.router.HandleFunc("/chat", r.Chat)
+	r.router.HandleFunc("/", r.Chat)
 }
 
 func (r *ChatRouter) Chat(w http.ResponseWriter, _ *http.Request) {
