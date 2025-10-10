@@ -7,8 +7,23 @@ export AWS_PAGER := ""
 meta:
     [ -f "{{meta_path}}" ] || echo "{}" > "{{meta_path}}"
 
-build:
-    npm run build
+build domain client_id:
+    VITE_COGNITO_DOMAIN_URL="{{domain}}" VITE_COGNITO_CLIENT_ID="{{client_id}}" npm run build
+
+[working-directory: "mock"]
+build-mock:
+    go build .
+
+[working-directory: "mock"]
+run-mock: build-mock
+    ./mock
+
+preview:
+    VITE_COGNITO_DOMAIN_URL="http://localhost:9090" VITE_COGNITO_CLIENT_ID="1234" npm run build
+    npm run preview
+
+[parallel]
+preview-with-mock: run-mock preview
 
 [working-directory: "infra"]
 tf-fmt:
@@ -30,3 +45,6 @@ deploy: meta
     #!/bin/bash -e
     bucket=$(jq -r '.bucket' "{{meta_path}}")
     aws s3 cp --recursive "{{justfile_directory()}}/dist/" "s3://${bucket}/"
+
+prettier:
+    npx prettier --write "src/**/*.{ts,tsx,js,jsx}"
