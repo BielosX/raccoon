@@ -8,7 +8,7 @@ export const UserInfo = () => {
 
   useEffect(() => {
     getUserInfo().then((info) => {
-      setUserName(info.name as string);
+      setUserName(info?.username ?? info.name ?? "");
     });
   }, [getUserInfo]);
 

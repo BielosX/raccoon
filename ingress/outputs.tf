@@ -9,3 +9,7 @@ output "alb_arn" {
 output "domain" {
   value = module.distribution.domain
 }
+
+output "distribution_id" {
+  value = module.distribution.id
+}

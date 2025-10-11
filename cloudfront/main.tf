@@ -77,6 +77,15 @@ resource "aws_cloudfront_distribution" "distribution" {
     cache_policy_id          = local.cache_policies_ids[var.default_cache_behavior.managed_cache_policy]
   }
 
+  dynamic "custom_error_response" {
+    for_each = var.custom_error_responses
+    content {
+      error_code         = custom_error_response.value.error_code
+      response_code      = custom_error_response.value.response_code
+      response_page_path = custom_error_response.value.response_page_path
+    }
+  }
+
   viewer_certificate {
     cloudfront_default_certificate = true
   }

@@ -1,6 +1,7 @@
 region := env("AWS_REGION", "eu-west-1")
 
 export AWS_REGION := region
+export AWS_PAGER := ""
 
 tf-apply:
     tofu init
@@ -11,3 +12,10 @@ tf-destroy:
 
 tf-fmt:
     tofu fmt -recursive .
+
+invalidate-cache:
+    #!/bin/bash -e
+    id=$(tofu output -raw distribution_id)
+    aws cloudfront create-invalidation \
+        --distribution-id "$id" \
+        --paths "/*"

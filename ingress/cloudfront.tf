@@ -2,6 +2,7 @@ locals {
   frontend_origin_id = "s3-frontend"
   alb_origin_id      = "alb-backend"
   backend_patterns   = ["/api/*", "/ws/*"]
+  expected_codes     = [404, 403]
 }
 
 module "distribution" {
@@ -33,6 +34,11 @@ module "distribution" {
     target_origin_id              = local.alb_origin_id
     managed_cache_policy          = "CachingDisabled"
     managed_origin_request_policy = "AllViewer"
+  }]
+  custom_error_responses = [for code in local.expected_codes : {
+    error_code         = code
+    response_code      = 200
+    response_page_path = "/index.html"
   }]
   web_acl_id = aws_wafv2_web_acl.waf.arn
 }

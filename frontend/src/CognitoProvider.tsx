@@ -71,6 +71,7 @@ export type UserInfo = {
   email?: string;
   email_verified?: boolean;
   name?: string;
+  username?: string;
   given_name?: string;
   family_name?: string;
   updated_at?: number;
@@ -118,7 +119,13 @@ export const CognitoProvider = ({
     localStorage.setItem(authNonceKey, nonce);
     const stateWithNonce = { ...state, __nonce: nonce };
     const authState = btoa(JSON.stringify(stateWithNonce));
-    window.location.href = `${loginUrl}?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${authState}&scope=${scope}`;
+    const encodedClientId = encodeURIComponent(clientId);
+    const encodedUri = encodeURIComponent(redirectUri);
+    const encodedState = encodeURIComponent(authState);
+    const encodedScope = encodeURIComponent(scope);
+    const goTo = `${loginUrl}?response_type=code&client_id=${encodedClientId}&redirect_uri=${encodedUri}&state=${encodedState}&scope=${encodedScope}`;
+    console.log(`Redirect to ${redirectUri}`);
+    window.location.href = goTo;
   };
 
   const storeTokenResponse = (response: TokenResponse) => {
@@ -173,11 +180,7 @@ export const CognitoProvider = ({
     appState: AppState = { returnTo: window.location.origin },
   ): Promise<string> => {
     const now = Date.now();
-    if (accessToken === null) {
-      loginWithRedirect(appState);
-      return "";
-    }
-    if (now > accessToken.expiresAt) {
+    if (accessToken === null || now > accessToken.expiresAt) {
       const refreshToken = localStorage.getItem(refreshTokenKey);
       if (refreshToken === null) {
         loginWithRedirect(appState);

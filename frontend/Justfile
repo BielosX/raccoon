@@ -8,7 +8,13 @@ meta:
     [ -f "{{meta_path}}" ] || echo "{}" > "{{meta_path}}"
 
 build domain client_id:
-    VITE_COGNITO_DOMAIN_URL="{{domain}}" VITE_COGNITO_CLIENT_ID="{{client_id}}" npm run build
+    #!/bin/bash
+    export VITE_COGNITO_DOMAIN_URL="{{domain}}"
+    export VITE_COGNITO_CLIENT_ID="{{client_id}}"
+    timestamp=$(date +%s)
+    export VITE_BUILD_VERSION="$timestamp"
+    export VITE_BUILD_TIMESTAMP="$timestamp"
+    npm run build
 
 [working-directory: "mock"]
 build-mock:

@@ -38,3 +38,12 @@ variable "default_root_object" {
   type    = string
   default = null
 }
+
+variable "custom_error_responses" {
+  type = list(object({
+    error_code         = number
+    response_code      = number
+    response_page_path = string
+  }))
+  default = []
+}
