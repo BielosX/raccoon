@@ -119,11 +119,14 @@ export const CognitoProvider = ({
     localStorage.setItem(authNonceKey, nonce);
     const stateWithNonce = { ...state, __nonce: nonce };
     const authState = btoa(JSON.stringify(stateWithNonce));
-    const encodedClientId = encodeURIComponent(clientId);
-    const encodedUri = encodeURIComponent(redirectUri);
-    const encodedState = encodeURIComponent(authState);
-    const encodedScope = encodeURIComponent(scope);
-    const goTo = `${loginUrl}?response_type=code&client_id=${encodedClientId}&redirect_uri=${encodedUri}&state=${encodedState}&scope=${encodedScope}`;
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      state: authState,
+      scope: scope,
+    });
+    const goTo = `${loginUrl}?${params.toString()}`;
     console.log(`Redirect to ${redirectUri}`);
     window.location.href = goTo;
   };
