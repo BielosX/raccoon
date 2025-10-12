@@ -11,3 +11,8 @@ terraform {
 provider "aws" {
   region = var.region
 }
+
+module "bucket" {
+  source      = "./../../private_bucket"
+  name_prefix = "raccoon-frontend-"
+}

@@ -70,6 +70,7 @@ module "service" {
   memory                = 512
   region                = var.region
   create_execution_role = true
+  task_role_arn         = aws_iam_role.task_role.arn
   service_connect = {
     namespace = local.default_namespace_arn
     services = [{
