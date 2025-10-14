@@ -92,13 +92,19 @@ func (t *TokenValidator) LoadJwks(ctx context.Context) error {
 	return nil
 }
 
+type parsedTokenKey struct{}
+
+var ParsedContextTokenKey = parsedTokenKey{}
+
 const (
-	JwtKid        = "kid"
-	Bearer        = "Bearer"
-	Authorization = "Authorization"
+	JwtKid = "kid"
+	Bearer = "Bearer"
 )
 
-func (t *TokenValidator) ValidateToken(c context.Context, tokenStr string) (bool, error) {
+func (t *TokenValidator) ValidateToken(
+	c context.Context,
+	tokenStr string,
+) (bool, *jwt.Token, error) {
 	token, err := t.parser.Parse(tokenStr, func(tkn *jwt.Token) (any, error) {
 		kid, ok := tkn.Header[JwtKid]
 		if !ok {
@@ -131,14 +137,14 @@ func (t *TokenValidator) ValidateToken(c context.Context, tokenStr string) (bool
 		return key, nil
 	})
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
-	return token.Valid, nil
+	return token.Valid, token, nil
 }
 
 func (t *TokenValidator) ValidatingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := r.Header.Get(Authorization)
+		auth := r.Header.Get(HeaderAuthorization)
 		if auth == "" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -148,7 +154,7 @@ func (t *TokenValidator) ValidatingMiddleware(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 		}
 		tokenStr := fields[1]
-		valid, err := t.ValidateToken(r.Context(), tokenStr)
+		valid, token, err := t.ValidateToken(r.Context(), tokenStr)
 		if err != nil {
 			t.logger.Error("Error validating token", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
@@ -158,6 +164,15 @@ func (t *TokenValidator) ValidatingMiddleware(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		next.ServeHTTP(w, r)
+		newRequest := r.WithContext(context.WithValue(r.Context(), ParsedContextTokenKey, token))
+		next.ServeHTTP(w, newRequest)
 	})
+}
+
+func GetParsedToken(r *http.Request) *jwt.Token {
+	val := r.Context().Value(ParsedContextTokenKey)
+	if token, ok := val.(*jwt.Token); ok {
+		return token
+	}
+	return nil
 }

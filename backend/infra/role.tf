@@ -6,7 +6,8 @@ locals {
 
 data "aws_iam_policy_document" "task_role_assume" {
   statement {
-    effect = "Allow"
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
     principals {
       identifiers = ["ecs-tasks.amazonaws.com"]
       type        = "Service"
@@ -35,7 +36,7 @@ data "aws_iam_policy_document" "task_role_policy" {
       "cognito-idp:AdminGetUser",
       "cognito-idp:AdminUpdateUserAttributes"
     ]
-    resources = [local.user_pool_id]
+    resources = [local.user_pool_arn]
   }
   statement {
     effect = "Allow"

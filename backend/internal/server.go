@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"go.uber.org/zap"
 )
 
@@ -14,9 +15,10 @@ type Server struct {
 	Config         *Config
 	logger         *zap.Logger
 	tokenValidator *TokenValidator
+	AwsConfig      *aws.Config
 }
 
-func NewServer(config *Config) (*Server, error) {
+func NewServer(config *Config, awsConfig *aws.Config) (*Server, error) {
 	cfg := zap.NewProductionConfig()
 	level, err := zap.ParseAtomicLevel(config.LogLevel)
 	if err != nil {
@@ -41,12 +43,13 @@ func NewServer(config *Config) (*Server, error) {
 		Config:         config,
 		logger:         logger,
 		tokenValidator: tokenValidator,
+		AwsConfig:      awsConfig,
 	}, nil
 }
 
 func (s *Server) Serve() {
 	defer ignore(s.logger.Sync)
-	router := SetupRoutes(s.Config, s.logger, s.tokenValidator)
+	router := SetupRoutes(s.Config, s.AwsConfig, s.logger, s.tokenValidator)
 	http.Handle("/", router)
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", s.Config.Port))
 	if err != nil {

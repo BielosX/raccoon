@@ -1,35 +1,28 @@
 package internal
 
 import (
-	"fmt"
 	"net/http"
-	"os"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	cognitoTypes "github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 )
 
 func ignore(f func() error) {
 	_ = f()
 }
 
-func PrintfStderr(format string, a ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stderr, format, a...)
-}
-
-func ExpectNil(err error) {
-	if err != nil {
-		PrintfStderr("%s\n", err.Error())
-		os.Exit(1)
-	}
-}
-
-func GetEnvOrDefault(key, defaultValue string) string {
-	value, set := os.LookupEnv(key)
-	if !set {
-		return defaultValue
-	}
-	return value
-}
-
 func WriteString(w http.ResponseWriter, s string, code int) {
 	w.WriteHeader(code)
 	_, _ = w.Write([]byte(s))
+}
+
+func ToUserAttributesMap(attributes []cognitoTypes.AttributeType) map[string]string {
+	result := make(map[string]string)
+	for _, attribute := range attributes {
+		if attribute.Value == nil {
+			continue
+		}
+		result[aws.ToString(attribute.Name)] = aws.ToString(attribute.Value)
+	}
+	return result
 }

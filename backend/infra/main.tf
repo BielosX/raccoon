@@ -41,4 +41,5 @@ locals {
   default_namespace_arn = data.terraform_remote_state.cluster.outputs.default_namespace_arn
   discovery_endpoints   = data.terraform_remote_state.cognito.outputs.discovery_endpoints
   user_pool_id          = data.terraform_remote_state.cognito.outputs.user_pool_id
+  user_pool_arn         = data.terraform_remote_state.cognito.outputs.user_pool_arn
 }

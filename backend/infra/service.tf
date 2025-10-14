@@ -10,10 +10,11 @@ locals {
 }
 
 resource "aws_lb_target_group" "group" {
-  target_type = "ip"
-  protocol    = "HTTP"
-  port        = local.container_port
-  vpc_id      = local.vpc_id
+  target_type          = "ip"
+  protocol             = "HTTP"
+  port                 = local.container_port
+  vpc_id               = local.vpc_id
+  deregistration_delay = 0
   health_check {
     enabled             = true
     path                = local.health_path
@@ -27,7 +28,8 @@ resource "aws_lb_target_group" "group" {
   }
 }
 
-resource "aws_lb_listener_rule" "rule" {
+resource "aws_lb_listener_rule" "rules" {
+  for_each     = toset([local.api_path_prefix, local.ws_path_prefix])
   listener_arn = local.listener_arn
 
   action {
@@ -35,12 +37,9 @@ resource "aws_lb_listener_rule" "rule" {
     target_group_arn = aws_lb_target_group.group.arn
   }
 
-  dynamic "condition" {
-    for_each = [local.api_path_prefix, local.ws_path_prefix]
-    content {
-      path_pattern {
-        values = ["${condition.value}/*"]
-      }
+  condition {
+    path_pattern {
+      values = ["${each.value}/*"]
     }
   }
 }
@@ -96,7 +95,10 @@ module "service" {
       # noinspection HILUnresolvedReference
       OPENID_CONFIGURATION_URL = local.discovery_endpoints.openid_configuration
       # noinspection HILUnresolvedReference
-      JWKS_URL = local.discovery_endpoints.jwks
+      JWKS_URL            = local.discovery_endpoints.jwks
+      USER_POOL_ID        = local.user_pool_id
+      AVATARS_BUCKET_NAME = module.bucket.name
+      REGION              = var.region
     }
   }]
   target_groups = [{
