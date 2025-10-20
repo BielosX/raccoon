@@ -34,8 +34,9 @@ type TokenResponse struct {
 }
 
 type UserInfoResponse struct {
-	Sub  string `json:"sub"`
-	Name string `json:"name"`
+	Sub      string `json:"sub"`
+	Name     string `json:"name"`
+	Username string `json:"username"`
 }
 
 type MockServer struct {
@@ -73,14 +74,22 @@ func (s *MockServer) handleToken(w http.ResponseWriter, _ *http.Request) {
 
 func (s *MockServer) handleUserInfo(w http.ResponseWriter, _ *http.Request) {
 	response, err := json.Marshal(UserInfoResponse{
-		Sub:  uuid.NewString(),
-		Name: "John Doe",
+		Sub:      uuid.NewString(),
+		Name:     "John Doe",
+		Username: "JohnDoe",
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	_, _ = w.Write(response)
+}
+
+func (s *MockServer) handleLogout(w http.ResponseWriter, r *http.Request) {
+	params := r.URL.Query()
+	state := params.Get("state")
+	redirect := params.Get("logout_uri")
+	http.Redirect(w, r, fmt.Sprintf("%s?state=%s", redirect, state), http.StatusFound)
 }
 
 func (s *MockServer) Serve() {
@@ -93,6 +102,7 @@ func (s *MockServer) Serve() {
 		AllowCredentials: true,
 	})
 	mux.HandleFunc("/login", s.handleLogin)
+	mux.HandleFunc("/logout", s.handleLogout)
 	mux.HandleFunc("/oauth2/token", s.handleToken)
 	mux.HandleFunc("/oauth2/userInfo", s.handleUserInfo)
 	port := getEnv("PORT", "9090")

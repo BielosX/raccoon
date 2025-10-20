@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@theme static {
+    --color-primary-main: var(--color-sky-700);
+    --color-primary-dark: var(--color-sky-800);
+    --color-primary-contrast-text: var(--color-white);
+    --color-shadow-primary: rgba(0, 0, 0, 0.3);
+    --color-secondary-main: var(--color-purple-700);
+}

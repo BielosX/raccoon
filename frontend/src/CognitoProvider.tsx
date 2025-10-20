@@ -1,15 +1,10 @@
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
-import { v4 as uuidv4 } from "uuid";
+import {createContext, type ReactNode, useContext, useEffect, useState,} from "react";
+import {v4 as uuidv4} from "uuid";
 
 type CognitoContextType = {
   loginWithRedirect: (appState?: AppState) => void;
   onRedirectCallback: (appState: AppState) => void;
+  logout: (appState?: AppState) => void;
   getAccessToken: (appState?: AppState) => Promise<string>;
   getUserInfo: (appState?: AppState) => Promise<UserInfo>;
   isAuthenticated: boolean;
@@ -22,6 +17,7 @@ type AccessTokenDetails = {
 
 const CognitoContext = createContext<CognitoContextType>({
   loginWithRedirect: () => {},
+  logout: () => {},
   onRedirectCallback: (_: AppState) => {},
   getAccessToken: () => {
     return Promise.resolve("");
@@ -36,10 +32,12 @@ export type CognitoProviderProps = {
   children: ReactNode;
   domainUrl: string;
   loginPath?: string;
+  logoutPath?: string;
   tokenPath?: string;
   userInfoPath?: string;
   clientId: string;
   scope: string;
+  logoutCallbackPath?: string;
   callbackPath?: string;
   errorPath?: string;
   onRedirectCallback: (appState: AppState) => void;
@@ -89,6 +87,7 @@ const FIVE_MINUTES = 5 * 60 * 1000;
 export const CognitoProvider = ({
   domainUrl,
   loginPath = "/login",
+  logoutPath = "/logout",
   tokenPath = "/oauth2/token",
   userInfoPath = "/oauth2/userInfo",
   clientId,
@@ -96,6 +95,7 @@ export const CognitoProvider = ({
   onRedirectCallback,
   children,
   callbackPath = "/callback",
+  logoutCallbackPath = "/logout",
   errorPath = "/error",
 }: CognitoProviderProps) => {
   const [accessToken, setAccessToken] = useState<AccessTokenDetails | null>(
@@ -105,20 +105,26 @@ export const CognitoProvider = ({
   const refreshTokenKey = "refreshToken";
   const authNonceKey = "authNonce";
   const redirectUri = `${window.location.origin}${callbackPath}`;
+  const logoutCallbackUri = `${window.location.origin}${logoutCallbackPath}`;
   const loginUrl = `${domainUrl}${loginPath}`;
+  const logoutUrl = `${domainUrl}${logoutPath}`;
   const tokenUrl = `${domainUrl}${tokenPath}`;
   const userInfoUrl = `${domainUrl}${userInfoPath}`;
   const isAuthenticated = accessToken !== null;
 
-  const loginWithRedirect = (
-    state: AppState = { returnTo: window.location.origin },
-  ) => {
-    setAccessToken(null);
-    localStorage.removeItem(refreshTokenKey);
+  const stateWithNonce = (state?: AppState): string => {
     const nonce = uuidv4();
     localStorage.setItem(authNonceKey, nonce);
     const stateWithNonce = { ...state, __nonce: nonce };
-    const authState = btoa(JSON.stringify(stateWithNonce));
+    return btoa(JSON.stringify(stateWithNonce));
+  }
+
+  const loginWithRedirect = (
+    state: AppState = { returnTo: "/" },
+  ) => {
+    setAccessToken(null);
+    localStorage.removeItem(refreshTokenKey);
+    const authState = stateWithNonce(state);
     const params = new URLSearchParams({
       response_type: "code",
       client_id: clientId,
@@ -179,8 +185,20 @@ export const CognitoProvider = ({
     });
   };
 
+  const logout = (appState: AppState = { returnTo: "/"}) => {
+    const authState = stateWithNonce(appState);
+    const params = new URLSearchParams({
+      client_id: clientId,
+      logout_uri: logoutCallbackUri,
+      state: authState,
+    });
+    const goTo = `${logoutUrl}?${params.toString()}`;
+    console.log(`Redirect to ${redirectUri}`);
+    window.location.href = goTo;
+  }
+
   const getAccessToken = async (
-    appState: AppState = { returnTo: window.location.origin },
+    appState: AppState = { returnTo: "/" },
   ): Promise<string> => {
     const now = Date.now();
     if (accessToken === null || now > accessToken.expiresAt) {
@@ -206,7 +224,7 @@ export const CognitoProvider = ({
   };
 
   const getUserInfo = async (
-    appState: AppState = { returnTo: window.location.origin },
+    appState: AppState = { returnTo: "/" },
   ): Promise<UserInfo> => {
     if (Date.now() > (userInfo?.expiresAt ?? 0)) {
       const token = await getAccessToken(appState);
@@ -226,42 +244,54 @@ export const CognitoProvider = ({
     return userInfo?.info as UserInfo;
   };
 
+  const verifyState = (params: URLSearchParams) : AppState | undefined => {
+    const authNonce = localStorage.getItem(authNonceKey);
+    if (!authNonce) {
+      console.error("authNonce not found in localStorage");
+      toErrorPage();
+      return;
+    }
+    const state = params.get("state");
+    if (!state) {
+      console.error("state query param not found");
+      toErrorPage();
+      return;
+    }
+    const decodedState: AppState & { __nonce: string } = JSON.parse(
+      atob(state as string),
+    );
+    if (authNonce !== decodedState.__nonce) {
+      console.error("received nonce does not match stored one");
+      toErrorPage();
+      return;
+    }
+    return decodedState;
+  }
+
   useEffect(() => {
     if (window.location.pathname === callbackPath) {
       const params = new URLSearchParams(window.location.search);
-      const authNonce = localStorage.getItem(authNonceKey);
-      if (!authNonce) {
-        console.error("authNonce not found in localStorage");
-        toErrorPage();
-        return;
-      }
-      const state = params.get("state");
-      if (!state) {
-        console.error("state query param not found");
-        toErrorPage();
-        return;
-      }
-      const decodedState: AppState & { __nonce: string } = JSON.parse(
-        atob(state as string),
-      );
-      if (authNonce !== decodedState.__nonce) {
-        console.error("received nonce does not match stored one");
-        toErrorPage();
-        return;
-      }
+      const state = verifyState(params);
       const code = params.get("code");
       if (!code) {
         console.error("code query param not found");
         toErrorPage();
         return;
       }
-      fetchToken(code as string, decodedState).catch(() => {
+      fetchToken(code as string, state as AppState).catch(() => {
         console.error("Failed to fetch token");
         toErrorPage();
         return;
       });
     }
-  }, [callbackPath, errorPath]);
+    if (window.location.pathname === logoutPath) {
+      const params = new URLSearchParams(window.location.search);
+      const state = verifyState(params);
+      setAccessToken(null);
+      localStorage.removeItem(refreshTokenKey);
+      onRedirectCallback(state as AppState);
+    }
+  }, [callbackPath, errorPath, logoutCallbackPath]);
 
   return (
     <CognitoContext.Provider
@@ -271,6 +301,7 @@ export const CognitoProvider = ({
         isAuthenticated,
         getAccessToken,
         getUserInfo,
+        logout,
       }}
     >
       {children}

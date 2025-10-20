@@ -8,8 +8,8 @@ export const CognitoProviderWithNavigate = ({
   children: ReactNode;
 }) => {
   const navigate = useNavigate();
-  const domainUrl: string = import.meta.env.VITE_COGNITO_DOMAIN_URL;
-  const clientId: string = import.meta.env.VITE_COGNITO_CLIENT_ID;
+  const domainUrl = import.meta.env.VITE_COGNITO_DOMAIN_URL;
+  const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
 
   return (
     <CognitoProvider
@@ -19,8 +19,8 @@ export const CognitoProviderWithNavigate = ({
       clientId={clientId}
       scope={"openid profile"}
       onRedirectCallback={function (state: AppState): void {
-        const returnTo = state?.returnTo ?? window.location.pathname;
-        console.log(`Entered callback, navigating to: ${returnTo}`);
+        const returnTo = state?.returnTo ?? "/";
+        console.log(`Entered callback, returnTo: ${state.returnTo}, navigating to: ${returnTo}`);
         navigate(returnTo);
       }}
     >
