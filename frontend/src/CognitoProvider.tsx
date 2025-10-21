@@ -288,7 +288,7 @@ export const CognitoProvider = ({
         return;
       });
     }
-    if (window.location.pathname === logoutPath) {
+    if (window.location.pathname === logoutCallbackPath) {
       const params = new URLSearchParams(window.location.search);
       const state = verifyState(params);
       setAccessToken(null);
