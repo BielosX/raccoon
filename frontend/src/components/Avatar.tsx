@@ -31,7 +31,7 @@ export const Avatar = ({
     <p className={fallbackClasses.join(" ")}>{children ?? ""}</p>
   );
   const sizeClasses = sizeFit
-    ? ["h-full", "aspect-[1/1]"]
+    ? ["h-full", "aspect-square"]
     : ["w-(--avatar-width)", "h-(--avatar-height)"];
   const containerClasses = [
     "bg-(--color-secondary-main)",
