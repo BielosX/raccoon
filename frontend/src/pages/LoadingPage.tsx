@@ -6,5 +6,5 @@ export const LoadingPage: FC = () => {
     <div className="h-screen flex items-center justify-center">
       <Spinner size={16} />
     </div>
-  )
+  );
 };

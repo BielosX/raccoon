@@ -20,7 +20,9 @@ export const CognitoProviderWithNavigate = ({
       scope={"openid profile"}
       onRedirectCallback={function (state: AppState): void {
         const returnTo = state?.returnTo ?? "/";
-        console.log(`Entered callback, returnTo: ${state.returnTo}, navigating to: ${returnTo}`);
+        console.log(
+          `Entered callback, returnTo: ${state.returnTo}, navigating to: ${returnTo}`,
+        );
         navigate(returnTo);
       }}
     >

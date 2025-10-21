@@ -1,6 +1,6 @@
-import {type ReactNode, useContext, useState} from "react";
-import {createContext} from "react";
-import {useCognito} from "./CognitoProvider.tsx";
+import { type ReactNode, useContext, useState } from "react";
+import { createContext } from "react";
+import { useCognito } from "./CognitoProvider.tsx";
 
 type AvatarContextType = {
   getAvatar: () => Promise<Blob | null>;
@@ -16,7 +16,7 @@ const AvatarContext = createContext<AvatarContextType>({
   uploadAvatar: (_: Blob) => Promise.resolve(),
 });
 
-export const AvatarProvider = ({ children } : {children: ReactNode}) => {
+export const AvatarProvider = ({ children }: { children: ReactNode }) => {
   const [avatar, setAvatar] = useState<Blob | null>(null);
   const { getAccessToken } = useCognito();
 
@@ -25,18 +25,18 @@ export const AvatarProvider = ({ children } : {children: ReactNode}) => {
       return avatar;
     }
     const token = await getAccessToken();
-    const response = await fetch('users/me/avatar', {
-      method: 'GET',
+    const response = await fetch("/api/users/me/avatar", {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
-      }
+      },
     });
     if (!response.ok) {
       return null;
     }
     const result: GetAvatarResponse = await response.json();
     const avatarResponse = await fetch(result.url, {
-      method: 'GET',
+      method: "GET",
     });
     const blob = await avatarResponse.blob();
     setAvatar(blob);
@@ -45,17 +45,19 @@ export const AvatarProvider = ({ children } : {children: ReactNode}) => {
 
   const uploadAvatar = async (_: Blob) => {
     return Promise.resolve();
-  }
+  };
 
   return (
-    <AvatarContext value={{
-      getAvatar,
-      uploadAvatar
-    }}>
+    <AvatarContext
+      value={{
+        getAvatar,
+        uploadAvatar,
+      }}
+    >
       {children}
     </AvatarContext>
-  )
-}
+  );
+};
 
 export const useAvatar = () => {
   const context = useContext(AvatarContext);

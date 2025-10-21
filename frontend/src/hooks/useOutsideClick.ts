@@ -1,6 +1,8 @@
 import { useRef, useEffect } from "react";
 
-export const useOutsideClick = <T extends HTMLElement = HTMLDivElement>(callback: () => void) => {
+export const useOutsideClick = <T extends HTMLElement = HTMLDivElement>(
+  callback: () => void,
+) => {
   const ref = useRef<T>(null);
 
   useEffect(() => {
@@ -10,12 +12,12 @@ export const useOutsideClick = <T extends HTMLElement = HTMLDivElement>(callback
       }
     };
 
-    document.addEventListener('click', handleClick, true);
+    document.addEventListener("click", handleClick, true);
 
     return () => {
-      document.removeEventListener('click', handleClick, true);
+      document.removeEventListener("click", handleClick, true);
     };
-  }, []);
+  }, [callback]);
 
   return ref;
 };

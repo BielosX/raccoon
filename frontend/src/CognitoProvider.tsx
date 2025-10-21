@@ -1,5 +1,11 @@
-import {createContext, type ReactNode, useContext, useEffect, useState,} from "react";
-import {v4 as uuidv4} from "uuid";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { v4 as uuidv4 } from "uuid";
 
 type CognitoContextType = {
   loginWithRedirect: (appState?: AppState) => void;
@@ -117,11 +123,9 @@ export const CognitoProvider = ({
     localStorage.setItem(authNonceKey, nonce);
     const stateWithNonce = { ...state, __nonce: nonce };
     return btoa(JSON.stringify(stateWithNonce));
-  }
+  };
 
-  const loginWithRedirect = (
-    state: AppState = { returnTo: "/" },
-  ) => {
+  const loginWithRedirect = (state: AppState = { returnTo: "/" }) => {
     setAccessToken(null);
     localStorage.removeItem(refreshTokenKey);
     const authState = stateWithNonce(state);
@@ -185,7 +189,7 @@ export const CognitoProvider = ({
     });
   };
 
-  const logout = (appState: AppState = { returnTo: "/"}) => {
+  const logout = (appState: AppState = { returnTo: "/" }) => {
     const authState = stateWithNonce(appState);
     const params = new URLSearchParams({
       client_id: clientId,
@@ -195,7 +199,7 @@ export const CognitoProvider = ({
     const goTo = `${logoutUrl}?${params.toString()}`;
     console.log(`Redirect to ${redirectUri}`);
     window.location.href = goTo;
-  }
+  };
 
   const getAccessToken = async (
     appState: AppState = { returnTo: "/" },
@@ -244,7 +248,7 @@ export const CognitoProvider = ({
     return userInfo?.info as UserInfo;
   };
 
-  const verifyState = (params: URLSearchParams) : AppState | undefined => {
+  const verifyState = (params: URLSearchParams): AppState | undefined => {
     const authNonce = localStorage.getItem(authNonceKey);
     if (!authNonce) {
       console.error("authNonce not found in localStorage");
@@ -266,7 +270,7 @@ export const CognitoProvider = ({
       return;
     }
     return decodedState;
-  }
+  };
 
   useEffect(() => {
     if (window.location.pathname === callbackPath) {

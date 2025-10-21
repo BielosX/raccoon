@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -48,6 +49,7 @@ func (s *MockServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
 	state := params.Get("state")
 	redirect := params.Get("redirect_uri")
+	time.Sleep(time.Second / 2)
 	http.Redirect(w, r, fmt.Sprintf("%s?state=%s&code=%d", redirect, state, 1234), http.StatusFound)
 }
 
@@ -89,6 +91,7 @@ func (s *MockServer) handleLogout(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
 	state := params.Get("state")
 	redirect := params.Get("logout_uri")
+	time.Sleep(time.Second / 2)
 	http.Redirect(w, r, fmt.Sprintf("%s?state=%s", redirect, state), http.StatusFound)
 }
 
@@ -101,10 +104,11 @@ func (s *MockServer) Serve() {
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})
-	mux.HandleFunc("/login", s.handleLogin)
-	mux.HandleFunc("/logout", s.handleLogout)
-	mux.HandleFunc("/oauth2/token", s.handleToken)
-	mux.HandleFunc("/oauth2/userInfo", s.handleUserInfo)
+	mux.HandleFunc("GET /login", s.handleLogin)
+	mux.HandleFunc("GET /logout", s.handleLogout)
+	mux.HandleFunc("POST /oauth2/token", s.handleToken)
+	mux.HandleFunc("GET /oauth2/userInfo", s.handleUserInfo)
+	mux.HandleFunc("GET /api/users/me/avatar", http.NotFound)
 	port := getEnv("PORT", "9090")
 	s.server = &http.Server{Addr: fmt.Sprintf(":%s", port), Handler: c.Handler(mux)}
 	err := s.server.ListenAndServe()

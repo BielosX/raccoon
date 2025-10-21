@@ -1,11 +1,11 @@
-import type {ReactNode} from "react";
+import type { ReactNode } from "react";
 
 type ButtonProps = {
   onClick?: () => void;
   children: ReactNode;
-}
+};
 
-export const Button = ({children, onClick}: ButtonProps) => {
+export const Button = ({ children, onClick }: ButtonProps) => {
   const classNames = [
     "bg-(--color-primary-main)",
     "text-(--color-primary-contrast-text)",
@@ -23,5 +23,5 @@ export const Button = ({children, onClick}: ButtonProps) => {
     <button onClick={onClick} className={classNames.join(" ")}>
       {children}
     </button>
-  )
-}
+  );
+};
