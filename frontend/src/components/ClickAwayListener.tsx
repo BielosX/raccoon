@@ -13,5 +13,9 @@ export const ClickAwayListener = ({
   const ref = useOutsideClick(() => {
     onClickAway();
   });
-  return <div ref={ref}>{children}</div>;
+  return (
+    <div className="contents" ref={ref}>
+      {children}
+    </div>
+  );
 };

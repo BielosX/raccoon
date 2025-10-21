@@ -47,8 +47,12 @@ const AuthenticatedMenu = () => {
 
   return (
     <ClickAwayListener onClickAway={() => setMenuOpen(false)}>
-      <div className="flex flex-col items-center justify-center">
-        <Avatar size={8} onClick={() => setMenuOpen(true)} src={avatarUrl}>
+      <div className="flex flex-col items-center justify-center h-full">
+        <Avatar
+          sizeFit={true}
+          onClick={() => setMenuOpen(true)}
+          src={avatarUrl}
+        >
           {userName?.charAt(0).toUpperCase()}
         </Avatar>
         {menuOpen && (

@@ -4,10 +4,17 @@ type AvatarProps = {
   src?: string;
   children?: string;
   size?: number;
+  sizeFit?: boolean;
   onClick?: () => void;
 };
 
-export const Avatar = ({ src, children, onClick, size = 16 }: AvatarProps) => {
+export const Avatar = ({
+  src,
+  children,
+  onClick,
+  size = 16,
+  sizeFit = false,
+}: AvatarProps) => {
   const cssProps = {
     "--avatar-width": `calc(var(--spacing) * ${size})`,
     "--avatar-height": `calc(var(--spacing) * ${size})`,
@@ -17,14 +24,16 @@ export const Avatar = ({ src, children, onClick, size = 16 }: AvatarProps) => {
   const fallbackClasses = [
     "text-(length:--avatar-text-size)",
     "font-bold",
+    "select-none",
     "text-(--color-primary-contrast-text)",
   ];
   const avatarFallback = (
     <p className={fallbackClasses.join(" ")}>{children ?? ""}</p>
   );
+  const sizeClasses = sizeFit
+    ? ["h-full", "aspect-[1/1]"]
+    : ["w-(--avatar-width)", "h-(--avatar-height)"];
   const containerClasses = [
-    "w-(--avatar-width)",
-    "h-(--avatar-height)",
     "bg-(--color-secondary-main)",
     "rounded-full",
     "overflow-hidden",
@@ -38,7 +47,7 @@ export const Avatar = ({ src, children, onClick, size = 16 }: AvatarProps) => {
     <div
       onClick={onClick}
       style={cssProps}
-      className={containerClasses.join(" ")}
+      className={containerClasses.concat(sizeClasses).join(" ")}
     >
       {src ? avatarImg : avatarFallback}
     </div>
