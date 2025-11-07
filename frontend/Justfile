@@ -25,7 +25,7 @@ run-mock: build-mock
     ./mock
 
 preview:
-    VITE_COGNITO_DOMAIN_URL="http://localhost:9090" VITE_COGNITO_CLIENT_ID="1234" npm run build
+    VITE_IDP_URL="http://localhost:9090" VITE_COGNITO_DOMAIN_URL="http://localhost:9090" VITE_COGNITO_CLIENT_ID="1234" npm run build
     npm run preview
 
 [parallel]

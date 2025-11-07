@@ -6,6 +6,8 @@ import {
   useState,
 } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { useCognitoWellKnown } from "./CognitoWellKnownProvider.tsx";
+import { jwtVerify } from "jose";
 
 type CognitoContextType = {
   loginWithRedirect: (appState?: AppState) => void;
@@ -56,7 +58,7 @@ export type AppState = {
 
 type TokenResponse = {
   access_token: string;
-  id_token: string;
+  id_token?: string;
   refresh_token?: string;
   expires_in: number;
   token_type: string;
@@ -108,8 +110,10 @@ export const CognitoProvider = ({
     null,
   );
   const [userInfo, setUserInfo] = useState<UserInfoDetails | null>();
+  const { getKey, getOpenIdConfig } = useCognitoWellKnown();
   const refreshTokenKey = "refreshToken";
-  const authNonceKey = "authNonce";
+  const stateNonceKey = "stateNonce";
+  const tokenNonceKey = "tokenNonce";
   const redirectUri = `${window.location.origin}${callbackPath}`;
   const logoutCallbackUri = `${window.location.origin}${logoutCallbackPath}`;
   const loginUrl = `${domainUrl}${loginPath}`;
@@ -120,7 +124,7 @@ export const CognitoProvider = ({
 
   const stateWithNonce = (state?: AppState): string => {
     const nonce = uuidv4();
-    localStorage.setItem(authNonceKey, nonce);
+    localStorage.setItem(stateNonceKey, nonce);
     const stateWithNonce = { ...state, __nonce: nonce };
     return btoa(JSON.stringify(stateWithNonce));
   };
@@ -129,12 +133,15 @@ export const CognitoProvider = ({
     setAccessToken(null);
     localStorage.removeItem(refreshTokenKey);
     const authState = stateWithNonce(state);
+    const nonce = uuidv4();
+    localStorage.setItem(tokenNonceKey, nonce);
     const params = new URLSearchParams({
       response_type: "code",
       client_id: clientId,
       redirect_uri: redirectUri,
       state: authState,
       scope: scope,
+      nonce,
     });
     const goTo = `${loginUrl}?${params.toString()}`;
     console.log(`Redirect to ${redirectUri}`);
@@ -168,6 +175,29 @@ export const CognitoProvider = ({
     return response.json();
   };
 
+  const verifyIdToken = async (token: string): Promise<boolean> => {
+    const config = await getOpenIdConfig();
+    try {
+      const result = await jwtVerify(token, getKey, {
+        issuer: config.issuer,
+      });
+      const tokenNonce = localStorage.getItem(tokenNonceKey);
+      if (!tokenNonce) {
+        console.error("Nonce not found in localStorage");
+        return false;
+      }
+      if (result.payload["nonce"] != tokenNonce) {
+        console.error("Nonce does not match");
+        return false;
+      }
+    } catch (error) {
+      console.error(`jwtVerify failed with error: ${error}`);
+      return false;
+    }
+    console.log("Id Token is correct");
+    return true;
+  };
+
   const fetchToken = async (code: string, appState: AppState) => {
     const result = await callTokenEndpoint({
       grant_type: "authorization_code",
@@ -175,6 +205,15 @@ export const CognitoProvider = ({
       redirect_uri: redirectUri,
       code: code,
     });
+    if (result.id_token) {
+      console.log("Validating Id Token");
+      const valid = await verifyIdToken(result.id_token);
+      if (!valid) {
+        console.error("Received Id Token is invalid");
+        toErrorPage();
+        return;
+      }
+    }
     storeTokenResponse(result);
     onRedirectCallback(appState);
   };
@@ -249,7 +288,7 @@ export const CognitoProvider = ({
   };
 
   const verifyState = (params: URLSearchParams): AppState | undefined => {
-    const authNonce = localStorage.getItem(authNonceKey);
+    const authNonce = localStorage.getItem(stateNonceKey);
     if (!authNonce) {
       console.error("authNonce not found in localStorage");
       toErrorPage();
