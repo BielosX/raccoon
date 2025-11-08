@@ -13,6 +13,7 @@ import {
   type JWK,
   type JWSHeaderParameters,
 } from "jose";
+import { usePersistentState } from "./hooks/usePersistentState.ts";
 
 type CognitoWellKnownProviderProps = {
   children: ReactNode;
@@ -20,6 +21,7 @@ type CognitoWellKnownProviderProps = {
 };
 
 type CognitoWellKnownContextType = {
+  isLoading: boolean;
   getOpenIdConfig: () => Promise<OpenIdConfigurationResponse>;
   getKey: (
     header?: JWSHeaderParameters,
@@ -28,6 +30,7 @@ type CognitoWellKnownContextType = {
 };
 
 const CognitoWellKnownContext = createContext<CognitoWellKnownContextType>({
+  isLoading: false,
   getOpenIdConfig: async () => {
     return Promise.reject();
   },
@@ -40,12 +43,18 @@ type OpenIdConfigurationResponse = {
   issuer: string;
 };
 
+type StoredKeys = {
+  [key: string]: JWK[];
+};
+
 export const CognitoWellKnownProvider = ({
   children,
   idpUrl,
 }: CognitoWellKnownProviderProps) => {
-  const [keys, setKeys] = useState<Map<string, JWK[]>>();
-  const [config, setConfig] = useState<OpenIdConfigurationResponse>();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [keys, setKeys] = usePersistentState<StoredKeys>("jwks");
+  const [config, setConfig] =
+    usePersistentState<OpenIdConfigurationResponse>("openIdConfig");
   const prefix = `${idpUrl}/.well-known`;
 
   const getKeys = async (): Promise<JSONWebKeySet> => {
@@ -62,31 +71,35 @@ export const CognitoWellKnownProvider = ({
     return await response.json();
   };
 
-  const kidToKeys = (keys: JWK[]): Map<string, JWK[]> => {
+  const kidToKeys = (keys: JWK[]): StoredKeys => {
     return keys.reduce((acc, value) => {
       if (value.kid) {
         const kid = value.kid;
-        const group = acc.get(kid) ?? [];
+        const group = acc[kid] ?? [];
         group.push(value);
-        acc.set(kid, group);
+        acc[kid] = group;
       }
       return acc;
-    }, new Map<string, JWK[]>());
+    }, {} as StoredKeys);
   };
 
   const getWellKnown = async () => {
-    const [keys, config] = await Promise.all([getKeys(), getConfig()]);
-    setConfig(config);
-    setKeys(kidToKeys(keys.keys));
+    if (keys && config) {
+      console.log("JWKS and config already fetched");
+      return;
+    }
+    const [k, c] = await Promise.all([getKeys(), getConfig()]);
+    setConfig(c);
+    setKeys(kidToKeys(k.keys));
     console.log(".well-known fetched");
   };
 
   const getJwk = (
-    keys: Map<string, JWK[]>,
+    keys: StoredKeys,
     kid: string,
     alg: string,
   ): JWK | undefined => {
-    return (keys.get(kid) ?? []).find((v) => v.alg === alg);
+    return (keys[kid] ?? []).find((v) => v.alg === alg);
   };
 
   const getKey = async (
@@ -107,6 +120,7 @@ export const CognitoWellKnownProvider = ({
         console.log(`JWK for kid ${kid} found`);
         return (await importJWK(jwk)) as CryptoKey;
       } else {
+        console.log(`JWK for kid ${kid} not found. Trying to fetch new ones`);
         const keys = await getKeys();
         const mapped = kidToKeys(keys.keys);
         setKeys(mapped);
@@ -133,9 +147,13 @@ export const CognitoWellKnownProvider = ({
   };
 
   useEffect(() => {
-    getWellKnown().catch(() => {
-      console.error(`Unable to fetch data from ${prefix}`);
-    });
+    getWellKnown()
+      .then(() => {
+        setLoading(false);
+      })
+      .catch(() => {
+        console.error(`Unable to fetch data from ${prefix}`);
+      });
   }, [idpUrl]);
 
   return (
@@ -143,6 +161,7 @@ export const CognitoWellKnownProvider = ({
       value={{
         getOpenIdConfig,
         getKey,
+        isLoading: loading,
       }}
     >
       {children}

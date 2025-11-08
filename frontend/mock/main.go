@@ -47,6 +47,7 @@ type MockServer struct {
 	server *http.Server
 	nonce  string
 	port   string
+	kid    string
 }
 
 func (s *MockServer) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +65,7 @@ func (s *MockServer) handleToken(w http.ResponseWriter, _ *http.Request) {
 		"iss":   fmt.Sprintf("http://localhost:%s", s.port),
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodRS256, mapClaims)
-	t.Header["kid"] = "1234"
+	t.Header["kid"] = s.kid
 	token, err := t.SignedString(s.key)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -130,7 +131,7 @@ func (s *MockServer) handleJwks(w http.ResponseWriter, _ *http.Request) {
 			Use: "sig",
 			Kty: "RSA",
 			Alg: "RS256",
-			Kid: "1234",
+			Kid: s.kid,
 		}},
 	}
 	convertedResponse, err := json.Marshal(response)
@@ -177,6 +178,7 @@ func (s *MockServer) Serve() {
 	mux.HandleFunc("GET /.well-known/openid-configuration", s.handleOpenIdConfig)
 	port := getEnv("PORT", "9090")
 	s.port = port
+	s.kid = uuid.New().String()
 	s.server = &http.Server{Addr: fmt.Sprintf(":%s", port), Handler: c.Handler(mux)}
 	err := s.server.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
