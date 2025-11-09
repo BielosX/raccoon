@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -43,11 +44,12 @@ type UserInfoResponse struct {
 }
 
 type MockServer struct {
-	key    *rsa.PrivateKey
-	server *http.Server
-	nonce  string
-	port   string
-	kid    string
+	key           *rsa.PrivateKey
+	server        *http.Server
+	nonce         string
+	port          string
+	kid           string
+	codeChallenge string
 }
 
 func (s *MockServer) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -55,11 +57,22 @@ func (s *MockServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	state := params.Get("state")
 	redirect := params.Get("redirect_uri")
 	s.nonce = params.Get("nonce")
+	s.codeChallenge = params.Get("code_challenge")
+	slog.Info("Received code_challenge", "value", s.codeChallenge)
 	time.Sleep(time.Second / 2)
 	http.Redirect(w, r, fmt.Sprintf("%s?state=%s&code=%d", redirect, state, 1234), http.StatusFound)
 }
 
-func (s *MockServer) handleToken(w http.ResponseWriter, _ *http.Request) {
+func (s *MockServer) handleToken(w http.ResponseWriter, r *http.Request) {
+	codeVerifier := r.FormValue("code_verifier")
+	slog.Info("Received code_verifier", "value", codeVerifier)
+	hash := sha256.Sum256([]byte(codeVerifier))
+	expected := base64.RawURLEncoding.EncodeToString(hash[:])
+	if expected != s.codeChallenge {
+		slog.Error("code_verifier does not match", "expected", expected, "actual", s.codeChallenge)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	mapClaims := jwt.MapClaims{
 		"nonce": s.nonce,
 		"iss":   fmt.Sprintf("http://localhost:%s", s.port),

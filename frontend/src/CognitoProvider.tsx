@@ -8,6 +8,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { useCognitoWellKnown } from "./CognitoWellKnownProvider.tsx";
 import { jwtVerify } from "jose";
+import { sha256 } from "js-sha256";
 
 type CognitoContextType = {
   loginWithRedirect: (appState?: AppState) => void;
@@ -70,6 +71,7 @@ type TokenEndpointParams = {
   redirect_uri?: string;
   code?: string;
   refresh_token?: string;
+  code_verifier?: string;
 };
 
 export type UserInfo = {
@@ -114,6 +116,7 @@ export const CognitoProvider = ({
   const refreshTokenKey = "refreshToken";
   const stateNonceKey = "stateNonce";
   const tokenNonceKey = "tokenNonce";
+  const codeVerifierKey = "codeVerifier";
   const redirectUri = `${window.location.origin}${callbackPath}`;
   const logoutCallbackUri = `${window.location.origin}${logoutCallbackPath}`;
   const loginUrl = `${domainUrl}${loginPath}`;
@@ -129,13 +132,27 @@ export const CognitoProvider = ({
     return btoa(JSON.stringify(stateWithNonce));
   };
 
+  const generateCodeChallenge = (verifier: string) => {
+    const hashBuffer = sha256.array(verifier);
+    const hashArray = new Uint8Array(hashBuffer);
+    return btoa(String.fromCharCode(...hashArray))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
+  };
+
   const loginWithRedirect = (state: AppState = { returnTo: "/" }) => {
     setAccessToken(null);
     localStorage.removeItem(refreshTokenKey);
     const authState = stateWithNonce(state);
     const nonce = uuidv4();
     localStorage.setItem(tokenNonceKey, nonce);
+    const codeVerifier = uuidv4();
+    localStorage.setItem(codeVerifierKey, codeVerifier);
+    const challenge = generateCodeChallenge(codeVerifier);
     const params = new URLSearchParams({
+      code_challenge_method: "S256",
+      code_challenge: challenge,
       response_type: "code",
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -199,10 +216,17 @@ export const CognitoProvider = ({
   };
 
   const fetchToken = async (code: string, appState: AppState) => {
+    const verifier = localStorage.getItem(codeVerifierKey);
+    if (!verifier) {
+      console.error("codeVerifier not found in localStorage");
+      toErrorPage();
+      return;
+    }
     const result = await callTokenEndpoint({
       grant_type: "authorization_code",
       client_id: clientId,
       redirect_uri: redirectUri,
+      code_verifier: verifier,
       code: code,
     });
     if (result.id_token) {
